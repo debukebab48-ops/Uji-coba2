@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Shadow Puppet</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #1a1512;
+            font-family: sans-serif;
+        }
+
+        /* The Stage */
+        #stage {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: radial-gradient(circle, #f4d03f 0%, #d35400 100%);
+            overflow: hidden;
+        }
+
+        /* Hidden video feed */
+        #webcam {
+            display: none;
+        }
+
+        /* Puppet Containers */
+        .puppet-wrapper {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 300px;
+            height: 400px;
+            pointer-events: none;
+            /* Add drop shadow to mimic real leather puppets */
+            filter: drop-shadow(10px 10px 15px rgba(0, 0, 0, 0.7));
+        }
+
+        #puppet-left {
+            left: -50px; /* Initial position */
+        }
+
+        #puppet-right {
+            right: -50px; /* Initial position */
+        }
+
+        /* Poses stacked on top of each other */
+        .pose {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            transition: opacity 0.15s ease-in-out;
+        }
+
+        /* Default state: Pose 1 visible, Pose 2 hidden */
+        .pose-idle { opacity: 1; }
+        .pose-action { opacity: 0; }
+
+        /* When pointing, swap the opacity */
+        .is-pointing .pose-idle { opacity: 0; }
+        .is-pointing .pose-action { opacity: 1; }
+
+        /* UI for tracking status */
+        #status {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            background: rgba(0,0,0,0.5);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="stage">
+        <!-- Left Puppet (Placeholder: Arjuna) -->
+        <div id="puppet-left" class="puppet-wrapper">
+            <!-- Note: Using public domain images from Wikimedia as placeholders -->
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Wayang_Kulit_Arjuna.jpg/400px-Wayang_Kulit_Arjuna.jpg" class="pose pose-idle" alt="Idle">
+            <!-- Using a slightly different image for action placeholder -->
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2e/Wayang_Kulit_Purwa_%28Dursasana%29.jpg/400px-Wayang_Kulit_Purwa_%28Dursasana%29.jpg" class="pose pose-action" alt="Action">
+        </div>
+
+        <!-- Right Puppet (Placeholder: Bima) -->
+        <div id="puppet-right" class="puppet-wrapper">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/Wayang_Kulit_Bima.jpg/400px-Wayang_Kulit_Bima.jpg" class="pose pose-idle" alt="Idle">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Wayang_Kulit_Gareng.jpg/400px-Wayang_Kulit_Gareng.jpg" class="pose pose-action" alt="Action">
+        </div>
+    </div>
+
+    <video id="webcam" autoplay playsinline></video>
+    <div id="status">Menunggu kamera...</div>
+
+    <!-- Load MediaPipe Hands -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+
+    <script>
+        const videoElement = document.getElementById('webcam');
+        const puppetLeft = document.getElementById('puppet-left');
+        const puppetRight = document.getElementById('puppet-right');
+        const statusText = document.getElementById('status');
+
+        // Store target positions and current positions for smooth lerping
+        let targets = {
+            left: { x: -50, y: window.innerHeight / 2 },
+            right: { x: window.innerWidth - 250, y: window.innerHeight / 2 }
+        };
+        let current = {
+            left: { x: -50, y: window.innerHeight / 2 },
+            right: { x: window.innerWidth - 250, y: window.innerHeight / 2 }
+        };
+
+        // Hand tracking results handler
+        function onResults(results) {
+            statusText.innerText = results.multiHandLandmarks.length > 0 ? "Tangan Terdeteksi" : "Menunggu tangan...";
+
+            // Reset classes
+            puppetLeft.classList.remove('is-pointing');
+            puppetRight.classList.remove('is-pointing');
+
+            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                for (let i = 0; i < results.multiHandLandmarks.length; i++) {
+                    const landmarks = results.multiHandLandmarks[i];
+                    const isRightHand = results.multiHandedness[i].label === 'Right'; // Based on camera view
+
+                    // Map normalized coordinates (0-1) to screen pixels
+                    // Mirror X axis because camera is mirrored
+                    const targetX = (1 - landmarks[9].x) * window.innerWidth;
+                    const targetY = landmarks[9].y * window.innerHeight;
+
+                    // Gesture detection: Is index finger extended and others closed?
+                    const indexTip = landmarks[8];
+                    const indexPip = landmarks[6];
+                    const middleTip = landmarks[12];
+                    const middlePip = landmarks[10];
+                    
+                    const isPointing = indexTip.y < indexPip.y && middleTip.y > middlePip.y;
+
+                    if (isRightHand) {
+                        targets.left = { x: targetX - 150, y: targetY }; // Adjust offset to center puppet
+                        if (isPointing) puppetLeft.classList.add('is-pointing');
+                    } else {
+                        targets.right = { x: targetX - 150, y: targetY };
+                        if (isPointing) puppetRight.classList.add('is-pointing');
+                    }
+                }
+            }
+        }
+
+        // Setup MediaPipe
+        const hands = new Hands({
+            locateFile: (file) => {
+                return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+            }
+        });
+
+        hands.setOptions({
+            maxNumHands: 2,
+            modelComplexity: 1,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+        });
+
+        hands.onResults(onResults);
+
+        // Setup Camera
+        const camera = new Camera(videoElement, {
+            onFrame: async () => {
+                await hands.send({ image: videoElement });
+            },
+            width: 640,
+            height: 480
+        });
+
+        camera.start().catch((err) => {
+            statusText.innerText = "Gagal akses kamera. Pastikan pakai HTTPS.";
+            console.error(err);
+        });
+
+        // Animation Loop for Lerping (Smooth movement)
+        function render() {
+            // Lerp formula: current = current + (target - current) * easing
+            const easing = 0.1; // 0.1 means smooth, 1.0 means instant snap
+
+            current.left.x += (targets.left.x - current.left.x) * easing;
+            current.left.y += (targets.left.y - current.left.y) * easing;
+            
+            current.right.x += (targets.right.x - current.right.x) * easing;
+            current.right.y += (targets.right.y - current.right.y) * easing;
+
+            // Apply CSS transforms
+            puppetLeft.style.transform = `translate(${current.left.x}px, ${current.left.y}px) translateY(-50%)`;
+            puppetRight.style.transform = `translate(${current.right.x}px, ${current.right.y}px) translateY(-50%)`;
+
+            requestAnimationFrame(render);
+        }
+
+        // Start rendering loop
+        render();
+    </script>
+</body>
+</html>
