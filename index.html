@@ -1,35 +1,44 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Digital Shadow Puppet</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>D_KUN Creative Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/tokens.css" />
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/layout.css" />
 </head>
 <body>
+  <!-- Fase 2: preloader -->
+  <div id="preloader" aria-hidden="true"></div>
 
-    <div id="stage">
-        <!-- Left Puppet -->
-        <div id="puppet-left" class="puppet-wrapper">
-            <img src="https://placehold.co/300x450/333333/FFFFFF?text=Wayang+1+Idle" class="pose pose-idle" alt="Idle">
-            <img src="https://placehold.co/300x450/cc0000/FFFFFF?text=Wayang+1+Action" class="pose pose-action" alt="Action">
-        </div>
+  <!-- Fase 2: page transition overlay -->
+  <div id="page-transition" aria-hidden="true"></div>
 
-        <!-- Right Puppet -->
-        <div id="puppet-right" class="puppet-wrapper">
-            <img src="https://placehold.co/300x450/333333/FFFFFF?text=Wayang+2+Idle" class="pose pose-idle" alt="Idle">
-            <img src="https://placehold.co/300x450/cc0000/FFFFFF?text=Wayang+2+Action" class="pose pose-action" alt="Action">
-        </div>
-    </div>
+  <nav id="navbar">
+    <a href="#/home" class="logo" aria-label="D_KUN Home">D</a>
+    <ul class="nav-links">
+      <li><a href="#/home"    data-route="home">Home</a></li>
+      <li><a href="#/profil"  data-route="profil">Profil</a></li>
+      <li><a href="#/project" data-route="project">Project</a></li>
+      <li><a href="#/kontak"  data-route="kontak">Kontak</a></li>
+    </ul>
+  </nav>
 
-    <video id="webcam" autoplay playsinline></video>
-    <div id="status">Menunggu kamera...</div>
+  <aside id="dot-indicator" aria-label="Section indicator"></aside>
 
-    <!-- MediaPipe Libraries -->
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
-    
-    <!-- Our Custom Script -->
-    <script src="script.js"></script>
+  <main id="app"></main>
+
+  <footer id="footer">
+    <span class="copyright">© 2026 D_KUN Creative Studio</span>
+    <span class="status">SYSTEM READY</span>
+  </footer>
+
+  <script src="js/pages.js"></script>
+  <script src="js/router.js"></script>
+  <script src="js/main.js"></script>
 </body>
 </html>
